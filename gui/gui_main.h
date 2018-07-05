@@ -22,7 +22,7 @@ void init_settings_by_default();
 void produce_ui();
 
 // For keyboard
-int DIY_CL, DIY_CR, DIY_CU, DIY_CD;
+int DIY_CL, DIY_CR, DIY_CU, DIY_CD, DIY_ST;
 
 #endif /* ifndef GUI_MAIN_H */
 

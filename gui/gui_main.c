@@ -1,8 +1,8 @@
 #include "gui_main.h"
 #include <string.h>
 
-extern int DIY_CL, DIY_CR, DIY_CU, DIY_CD;
-extern int xcont, ychat, STEP, lastw, lasth;
+extern int DIY_CL, DIY_CR, DIY_CU, DIY_CD, DIY_ST;
+extern int xcont, ychat, STEP, lastw, lasth, focus_panel;
 PANEL *pcontact, *pchat, *ptyping;
 
 #define min(a, b) \
@@ -18,15 +18,15 @@ static struct key {
     const char *name;
     int code;
 } Keys[] = {
-    {"kLFT5", 0},
-    {"kUP5",  0},
-    {"kRIT5", 0},
-    {"kDN5",  0},
-    {"kEND5", 0},
-    {"kHOM5", 0},
-    {"kHOM3", 0},
-    {"kUP5",  0},
-    {"kDN5",  0},
+    {"kLFT5",    0},
+    {"kUP5",     0},
+    {"kRIT5",    0},
+    {"kDN5",     0},
+    {"kEY_BTAB", 0},
+    {"kHOM5",    0},
+    {"kHOM3",    0},
+    {"kUP5",     0},
+    {"kDN5",     0},
     {0, 0}
 };
 
@@ -50,6 +50,7 @@ void build_keys(){
     DIY_CU = Keys[1].code;
     DIY_CR = Keys[2].code;
     DIY_CD = Keys[3].code;
+    DIY_ST = Keys[4].code;
 }
 
 void draw_rect(int sy, int sx, int ey, int ex){
@@ -117,10 +118,7 @@ int process_event(int ch){
         draw_panel();
     } else if (ch == CTRL('w')) {
         return WILL_EXIT;
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
+    } else if (ch == DIY_ST) {
     } else if (ch == DIY_CD) {
         if (ychat+STEP > MAX_CHAT_P*H) return ERR;
         ychat += STEP;

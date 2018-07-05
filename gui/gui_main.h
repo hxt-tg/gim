@@ -19,7 +19,7 @@ void draw_rect(int sy, int sx, int ey, int ex);
 void draw_panel();
 int  process_event(int ch);
 void init_settings_by_default();
-void produce_ui();
+void start_ui();
 
 // For keyboard
 int DIY_CL, DIY_CR, DIY_CU, DIY_CD, DIY_ST;

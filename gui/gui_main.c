@@ -2,11 +2,18 @@
 #include <string.h>
 
 extern int DIY_CL, DIY_CR, DIY_CU, DIY_CD, DIY_ST;
-extern int xcont, ychat, STEP, lastw, lasth, focus_panel;
+extern int xcont, ychat, STEP, lastw, lasth, focus_panel, n_contacts;
+extern User self;
+extern User *contacts;
+
 PANEL *pcontact, *pchat, *ptyping;
+WINDOW *whelp;
+int cur_user = 0;
 
 #define min(a, b) \
     ((a) < (b) ? (a) : (b))
+#define max(a, b) \
+    ((a) > (b) ? (a) : (b))
 #define Swap(m, n) \
     do {(m) ^= (n); (n) ^= (m); (m) ^= (n);} while(0)
 #define draw_vline(sy, ey, x) \
@@ -66,8 +73,53 @@ void draw_rect(int sy, int sx, int ey, int ex){
     draw_hline(sx+1, ex-1, ey);
 }
 
+void inflate_contact(){
+    char sn[128] = {0}, sp[128] = {0}, *s = sn;
+    sprintf(sn, "User: %s", self.username);
+    sprintf(sp, "Phone: %s", self.phone);
+    print_in_middle(panel_window(pcontact), 1, 0, xcont, (char *)"GIM");
+    print_in_middle(panel_window(pcontact), 3, 0, xcont, sn);
+    print_in_middle(panel_window(pcontact), 4, 0, xcont, sp);
+    wmove(panel_window(pcontact), 5, 0);
+    int i;
+    for (i = 0; i < xcont-1; i++)
+        waddch(panel_window(pcontact), '_');
+
+    for (i = 0; i < n_contacts; i++) {
+        sprintf(sn, "%s", contacts[i].username);
+        sprintf(sp, " (%s)", contacts[i].phone);
+        for (s = sn + strlen(sn); s-sn < xcont-3; s++) *s = ' ';
+        for (s = sp + strlen(sp); s-sp < xcont-3; s++) *s = ' ';
+
+        if (i == cur_user) wattron(panel_window(pcontact), A_REVERSE);
+        mvwprintw(panel_window(pcontact), 7+3*i, 1, "%s", sn);
+        mvwprintw(panel_window(pcontact), 8+3*i, 1, "%s", sp);
+        if (i == cur_user) wattroff(panel_window(pcontact), A_REVERSE);
+    }
+}
+
+void load_msg(const char *p){
+    char filename[256];
+    int ch;
+    sprintf(filename, "/home/ubuntu/.gim/%s", p);
+    FILE *fp = fopen(filename, "r");
+    while ((ch = fgetc(fp)) != EOF)
+        waddch(panel_window(pchat), ch);
+    fclose(fp);
+}
+
+void inflate_chat(){
+    print_in_middle(stdscr, 1, xcont+1, W-xcont, contacts[cur_user].username);
+    print_in_middle(stdscr, 2, xcont+1, W-xcont, contacts[cur_user].phone);
+    wmove(stdscr, 3, xcont+1);
+    int i;
+    for (i = xcont+1; i < W-1; i++)
+        waddch(stdscr, '_');
+    load_msg(contacts[cur_user].phone);
+}
+
 void draw_panel(){
-    // wclear(wcontact);
+    clear();
     // Build borders
     draw_rect(0, 0, H-1, W-1);
     draw_vline(1, H-2, xcont);
@@ -82,11 +134,11 @@ void draw_panel(){
     mvaddch(ychat, W-1,   ACS_RTEE);
     // refresh windows
     rearange_panel(pcontact, H-2, xcont-1, 1, 1);
-    rearange_panel(pchat,    ychat-1, W-2-xcont, 1, xcont+1);
+    rearange_panel(pchat,    ychat-4, W-2-xcont, 4, xcont+1);
+    scrollok(panel_window(pchat), TRUE);
     rearange_panel(ptyping,  H-2-ychat, W-2-xcont, ychat+1, xcont+1);
-    //box(panel_window(pcontact), 0, 0);
-    //box(panel_window(pchat), 0, 0);
-    //box(panel_window(ptyping), 0, 0);
+    inflate_contact();
+    inflate_chat();
     refresh();
     update_panels();
     doupdate();
@@ -99,69 +151,77 @@ int process_event(int ch){
         lasth = H;
         lastw = W;
         draw_panel();
-    } else if (ch == DIY_CL) {
+    } else if (ch == DIY_CL || ch == KEY_F(7)) {
         if (xcont-STEP < MIN_CONT_P*W) return ERR;
         xcont -= STEP;
         rearange_panel(pcontact, xcont-1, H-2, 1, 1);
         draw_panel();
-    } else if (ch == DIY_CR) {
+    } else if (ch == DIY_CR || ch == KEY_F(8)) {
         if (xcont+STEP > MAX_CONT_P*W) return ERR;
         xcont += STEP;
         draw_panel();
-    } else if (ch == DIY_CU) {
+    } else if (ch == DIY_CU || ch == KEY_F(9)) {
         if (ychat-STEP < MIN_CHAT_P*H) return ERR;
         ychat -= STEP;
         draw_panel();
-    } else if (ch == DIY_CD) {
+    } else if (ch == DIY_CD || ch == KEY_F(10)) {
         if (ychat+STEP > MAX_CHAT_P*H) return ERR;
         ychat += STEP;
         draw_panel();
     } else if (ch == CTRL('w')) {
         return WILL_EXIT;
-    } else if (ch == DIY_ST) {
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
+    } else if (ch == 'i') {
+        char m[MAXLINE] = {0};
+        echo();
+        mvwgetnstr(panel_window(ptyping), 0, 0, m, MAXLINE);
+        msg(contacts[cur_user].phone, m);
+        noecho();
+        wclear(panel_window(ptyping));
+        wrefresh(panel_window(ptyping));
+    } else if (ch == 'h') {
+        return OK;
+        touchwin(whelp);
+        wrefresh(whelp);
+        getch();
+        touchwin(stdscr);
+        wrefresh(stdscr);
+    } else if (ch == KEY_NPAGE) {
+        cur_user = (cur_user+1)%n_contacts;
         draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
+    } else if (ch == KEY_PPAGE) {
+        cur_user = (cur_user+n_contacts-1)%n_contacts;
         draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == 0) {
+    } else if (ch == ERR) {
+        hist(contacts[cur_user].phone);
         draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
-    } else if (ch == DIY_CD) {
-        if (ychat+STEP > MAX_CHAT_P*H) return ERR;
-        ychat += STEP;
-        draw_panel();
+        /* wprintw(panel_window(pchat), "Lone msg.\n"); */
+        /* refresh(); */
+        /* update_panels(); */
+        /* doupdate(); */
     } else {
+        return OK;
         waddch(panel_window(ptyping), ch);
         wrefresh(panel_window(ptyping));
-        ;
     }
     return OK;
 }
+
 
 void init_settings_by_default(){
     lastw = W;
@@ -169,15 +229,49 @@ void init_settings_by_default(){
     STEP = 1;
     xcont = W*DFT_XCONT_P;
     ychat = H*DFT_YCHAT_P;
+    cur_user = 0;
+}
+
+void destroy_ui(){
+    del_panel(pchat);
+    del_panel(ptyping);
+    del_panel(pcontact);
+}
+
+void make_help(){
+    int h = max(0.5*H, 10), w = max(0.5*W, 40);
+    whelp = newwin(h, w, 2, 2);
+    box(whelp, 0, 0);
+    mvwaddstr(whelp, 2, 6, "Help");
+    wstandend(whelp);
+}
+
+void read_info(){
+    FILE *fp = fopen("/home/ubuntu/.gim/info", "r");
+    fscanf(fp, "%s", self.username);
+    fscanf(fp, "%s", self.phone);
+    fclose(fp);
+    fp = fopen("/home/ubuntu/.gim/contacts", "r");
+    int i;
+    fscanf(fp, "%d", &n_contacts);
+    contacts = (User *) malloc(sizeof(User)*n_contacts);
+    for (i = 0; i < n_contacts; i++){
+        fscanf(fp, "%s", contacts[i].username);
+        fscanf(fp, "%s", contacts[i].phone);
+    }
+    fclose(fp);
+}
+
+void start_ui(){
+    start_color();
+    timeout(2000);
     pcontact = create_panel(NULL, H-2, xcont-1, 1, 1);
     pchat    = create_panel(NULL, ychat-1, W-2-xcont, 1, xcont+1);
     ptyping  = create_panel(NULL, H-2-ychat, W-2-xcont, ychat+1, xcont+1);
-}
-
-void produce_ui(){
-    int ch;
+    scrollok(panel_window(pchat), TRUE);
     draw_panel();
-    while(WILL_EXIT != process_event(ch = getch()));
+    while(WILL_EXIT != process_event(getch()));
+    destroy_ui();
 }
 
 

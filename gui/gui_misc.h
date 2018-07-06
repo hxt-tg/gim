@@ -41,8 +41,8 @@ void print_in_middle(WINDOW *win, int starty, int startx, int width, char *strin
 void read_info();
 void msg(const char *user_to, const char *m);
 int hist(const char *user_from);
-void upload(const char *user_to, const char *path);
-void download(const char *filepath, const char *user_from);
+int upload(const char *user_to, const char *path);
+void download(const char *user_from, const char *filepath);
 
 
 #endif /* ifndef GUI_MISC_H */

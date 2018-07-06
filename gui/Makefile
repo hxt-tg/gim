@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall
 GUILIB = -lcurses -lpanel -lform -lcurl
-LIB_OBJ = gui_main.o gui_misc.o gui_contact.o
-LIB_H   = gui_main.h gui_misc.h gui_contact.h
+LIB_OBJ = gui_main.o gui_misc.o
+LIB_H   = gui_main.h gui_misc.h
 
 .PHONY: clean cleanall all
 all: demo keys_test clean

@@ -204,16 +204,32 @@ int process_event(int ch){
     } else if (ch == 0) {
     } else if (ch == 0) {
     } else if (ch == 0) {
-    } else if (ch == 0) {
-    } else if (ch == 0) {
-    } else if (ch == 0) {
+    } else if (ch == 'd') {
+        char m[256] = {0};
+        mvwaddstr(panel_window(ptyping), 0, 0, "Download to: ");
+        wrefresh(panel_window(ptyping));
+        echo();
+        mvwgetnstr(panel_window(ptyping), 0, 13, m, 256);
+        download(contacts[cur_user].phone, m);
+        noecho();
+        wclear(panel_window(ptyping));
+        wrefresh(panel_window(ptyping));
+    } else if (ch == 'f') {
+        char m[256] = {0};
+        mvwaddstr(panel_window(ptyping), 0, 0, "Upload file: ");
+        wrefresh(panel_window(ptyping));
+        echo();
+        mvwgetnstr(panel_window(ptyping), 0, 13, m, 256);
+        upload(contacts[cur_user].phone, m);
+        noecho();
+        wclear(panel_window(ptyping));
+        wrefresh(panel_window(ptyping));
+    } else if (ch == 'l') {
+        if (hist(contacts[cur_user].phone) == OK)
+            draw_panel();
     } else if (ch == ERR) {
-        hist(contacts[cur_user].phone);
-        draw_panel();
-        /* wprintw(panel_window(pchat), "Lone msg.\n"); */
-        /* refresh(); */
-        /* update_panels(); */
-        /* doupdate(); */
+        if (hist(contacts[cur_user].phone) == OK)
+            draw_panel();
     } else {
         return OK;
         waddch(panel_window(ptyping), ch);
@@ -264,7 +280,7 @@ void read_info(){
 
 void start_ui(){
     start_color();
-    timeout(2000);
+    timeout(3000);
     pcontact = create_panel(NULL, H-2, xcont-1, 1, 1);
     pchat    = create_panel(NULL, ychat-1, W-2-xcont, 1, xcont+1);
     ptyping  = create_panel(NULL, H-2-ychat, W-2-xcont, ychat+1, xcont+1);
